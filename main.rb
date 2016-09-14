@@ -1,9 +1,10 @@
 require 'aws-sdk'
 
+# list file in a bucket
 def list_files(bucket)
   bucket.objects.each_with_index do |object_summary, index|
     puts "\t #{index+1}. #{object_summary.key}(#{object_summary.size} bytes)"
-    puts "\t\tLink: #{object_summary.public_url}"
+    puts "\t\tPublic link: #{object_summary.public_url}"
   end
 end
 
@@ -52,7 +53,7 @@ first_obj.delete if $stdin.getc == 'y'
 
 # check delete
 if first_obj.exists?
-  puts "\nNothing to delete"
+  puts "\nNot delete anything!"
 else
   puts "\nDelete first_file.txt successfully!"
   puts "List files again:"
