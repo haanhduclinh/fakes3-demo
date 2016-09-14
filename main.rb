@@ -1,10 +1,19 @@
 require 'aws-sdk'
 
+def get_public_url(client, bucket_name, key)
+  Aws::S3::Object.new(
+    key: key,
+    bucket_name: bucket_name,
+    client: client
+  ).public_url
+end
+
 # list file in a bucket
-def list_files(bucket)
-  bucket.objects.each_with_index do |object_summary, index|
-    puts "\t #{index+1}. #{object_summary.key}(#{object_summary.size} bytes)"
-    puts "\t\tPublic link: #{object_summary.public_url}"
+def list_files(client, bucket_name)
+  client.list_objects(bucket: bucket_name).contents.each_with_index do |content, index|
+    puts "\t #{index+1}. #{content.key}(#{content.size} bytes)"
+    public_url = get_public_url(client, bucket_name, content.key)
+    puts "\t\tPublic link: #{public_url}"
   end
 end
 
@@ -33,29 +42,36 @@ buckets.each_with_index do |bucket, index|
 end
 
 # upload files to pixtavietnam-local bucket
-s3 = Aws::S3::Resource.new
-bucket = s3.bucket(bucket_name)
+client.put_object(
+  bucket: bucket_name,
+  key: "first_file.txt",
+  body: File.open("uploads/note.txt", "rb")
+)
 
-first_obj = bucket.object("first_file.txt");
-first_obj.upload_file('uploads/note.txt')
-
-second_obj = bucket.object("second_file.png");
-second_obj.upload_file('uploads/dev.png')
-
+client.put_object(
+  bucket: bucket_name,
+  key: "second_file.png",
+  body: File.open("uploads/dev.png", "rb")
+)
 puts "\nUpload files to \'#{bucket_name}\' successfully!"
 
+# list all objects
 puts "\nList files:"
-list_files(bucket)
+list_files(client, bucket_name)
 
 # delete
-puts "You want to delete first_file.txt? (y/n)"
-first_obj.delete if $stdin.getc == 'y'
+client.delete_object(
+  bucket: bucket_name,
+  key: "first_file.txt"
+)
+puts "\nDelete first_file.txt successfully!"
 
-# check delete
-if first_obj.exists?
-  puts "\nNot delete anything!"
-else
-  puts "\nDelete first_file.txt successfully!"
-  puts "List files again:"
-  list_files(bucket)
-end
+client.delete_object(
+  bucket: bucket_name,
+  key: "second_file.png"
+)
+puts "Delete second_file.png successfully!"
+
+# Delete bucket
+client.delete_bucket(bucket: bucket_name)
+puts "Delete bucket \'#{bucket_name}\' successfully!"
